@@ -1,0 +1,7 @@
+LOCATION         = "room481"
+MQTT_ENABLE      = True
+MQTT_BROKER      = "10.4.81.11"
+MQTT_TOPIC       = "sensors/"+LOCATION
+WLAN_ENABLE      = True
+WLAN_SSID        = "MYSSID"
+WLAN_PASS        = "MYKEY"
