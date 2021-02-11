@@ -11,6 +11,7 @@ import vga1_bold_16x32 as font2
 import random
 import _thread
 import ntptime
+import time
 import utime
 
 from time import sleep
@@ -21,25 +22,40 @@ try:
 except Exception as e:
   print("Exception: {}".format(e))
 
+def cettime():
+  year = time.localtime()[0]       #get current year
+  HHMarch   = time.mktime((year,3 ,(31-(int(5*year/4+4))%7),1,0,0,0,0,0)) #Time of March change to CEST
+  HHOctober = time.mktime((year,10,(31-(int(5*year/4+1))%7),1,0,0,0,0,0)) #Time of October change to CET
+  now=time.time()
+  if now < HHMarch :               # we are before last sunday of march
+    cet=time.localtime(now+3600) # CET:  UTC+1H
+  elif now < HHOctober :           # we are before last sunday of october
+    cet=time.localtime(now+7200) # CEST: UTC+2H
+  else:                            # we are after last sunday of october
+    cet=time.localtime(now+3600) # CET:  UTC+1H
+  return(cet)
+
 def get_address():
   if config.WLAN_ENABLE is False:
-    return None
+    return "no wifi"
   try:
     wlan = network.WLAN(network.STA_IF)
     if not wlan.isconnected():
-      return 'none'
+      return "no address"
     return wlan.ifconfig()[0]
   except Exception as e:
     print("Exception: {}".format(e))
 
 def get_broker_address():
+  if not config.MQTT_BROKER:
+    return "no broker"
   return config.MQTT_BROKER
 
 def _time():
   while True:
-    gmt = rtc.datetime()    # get the date and time in UTC
-    date = '{:02}/{:02}/{:02}'.format(gmt[0], gmt[1], gmt[2])
-    time = '{:02}:{:02}:{:02}'.format(gmt[4], gmt[5], gmt[6])
+    cet = cettime()    # get the date and time in UTC
+    date = '{:02}/{:02}/{:02}'.format(cet[0], cet[1], cet[2])
+    time = '{:02}:{:02}:{:02}'.format(cet[3], cet[4], cet[5])
     tft.text(font1, time, 0, 0, ili9342c.WHITE, ili9342c.BLACK)
     tft.text(font1, date, tft.width() - (font1.WIDTH * len(date)), 0, ili9342c.WHITE, ili9342c.BLACK)
     utime.sleep(1)
@@ -64,8 +80,8 @@ def _gaz():
       tvoc_color = ili9342c.RED
     elif tvoc < 600:
       tvoc_color = ili9342c.GREEN
-    tft.text(font2, "CO2 -> {:.10} ppm".format(co2_eq), 20, 50, co2_color, ili9342c.BLACK)
-    tft.text(font2, "TVOC -> {:.10} ppb".format(tvoc), 20, 150, tvoc_color, ili9342c.BLACK)
+    tft.text(font2, "CO2 -> {:>7} ppm".format(co2_eq), 20, 50, co2_color, ili9342c.BLACK)
+    tft.text(font2, "TVOC -> {:>6} ppb".format(tvoc), 20, 150, tvoc_color, ili9342c.BLACK)
     if config.MQTT_ENABLE is True and config.WLAN_ENABLE is True:
       payload = b'{"location":"' + config.LOCATION + '","ppm":' + str(co2_eq) + ',"ppb":' + str(tvoc) + '}'
       try:
